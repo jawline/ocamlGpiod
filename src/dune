@@ -1,0 +1,6 @@
+(library
+  (name gpiod)
+  (public_name gpiod)
+  (foreign_stubs (language c) (names ml_gpiod))
+  (c_library_flags :standard -lgpiod)
+  (libraries base stdio))
