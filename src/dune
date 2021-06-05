@@ -5,13 +5,8 @@
   (language c)
   (names gpiod_stubs))
  (c_library_flags :standard -lgpiod)
- (modules)
+ (modules gpiod)
  (libraries base stdio))
-
-(executable
- (name test_pi)
- (modules test_pi gpiod)
- (libraries gpiod))
 
 (executable
  (name generator)
