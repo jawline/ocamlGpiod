@@ -9,7 +9,7 @@ let from_value_type name arg_type =
   | "int" -> sprintf "Int_val(%s)" name
   | "unsigned int" -> sprintf "Int_val(%s)" name
   | "bool" -> sprintf "Bool_val(%s)" name
-  | "char*" -> sprintf "String_val(%s)" name
+  | "char *" | "const char *" | "char const *" -> sprintf "String_val(%s)" name
   | _ ->
     if String.is_suffix arg_type ~suffix:"*"
     then sprintf "((%s) ptr_of_val(%s))" arg_type name
@@ -22,11 +22,24 @@ let to_value_type name arg_type =
   | "int" -> sprintf "Val_int(%s)" name
   | "unsigned int" -> sprintf "Val_int(%s)" name
   | "bool" -> sprintf "Val_bool(%s)" name
-  | "char*" -> sprintf "caml_copy_string(%s)" name
+  | "char *" | "const char *" | "char const *" -> sprintf "caml_copy_string(%s)" name
   | _ ->
     if String.is_suffix arg_type ~suffix:"*"
     then sprintf "val_of_ptr((void *)%s)" name
     else raise (InvalidFunction (sprintf "Could not to_value %s" arg_type))
+;;
+
+let to_ocaml_typename arg_type =
+  match arg_type with
+  | "void" -> "()"
+  | "int" -> "int"
+  | "unsigned int" -> "int"
+  | "bool" -> "bool"
+  | "char *" | "const char *" | "char const *"  -> "string"
+  | _ ->
+    if String.is_suffix arg_type ~suffix:"*"
+    then "nativeint"
+    else raise (InvalidFunction (sprintf "Could not to_ocaml_typename '%s'" arg_type))
 ;;
 
 let generate_function_binding name arguments return_type =
@@ -106,9 +119,10 @@ let extract_arguments args_str =
           String.strip l, String.strip r))
 ;;
 
-let process_header_file preamble_file filepath output =
+let process_header_file preamble_file filepath output_c output_ml =
   printf "Starting to read\n";
-  let out_file = Out_channel.create output in
+  let out_file = Out_channel.create output_c in
+  let out_ml = Out_channel.create output_ml in
   let prelude = In_channel.read_all preamble_file in
   Printf.fprintf out_file "%s" prelude;
   let lines = In_channel.read_all filepath in
@@ -125,7 +139,7 @@ let process_header_file preamble_file filepath output =
       let line_match = test_line x in
       (match line_match with
       | Some fn ->
-        (try
+        (try (
            (* printf "Parts %s %s %s\n" (Array.get fn 1) (Array.get fn 2) (Array.get fn 3); *)
            let processed_arguments = extract_arguments (Array.get fn 3) in
            let generated_fn =
@@ -134,10 +148,12 @@ let process_header_file preamble_file filepath output =
                processed_arguments
                (String.strip (Array.get fn 1))
            in
-           Printf.fprintf out_file "%s\n" generated_fn
-         with
+           Printf.fprintf out_file "%s\n" generated_fn;
+           let ocaml_args = List.map (List.append processed_arguments [(String.strip (Array.get fn 1), "return")]) ~f:(fun x -> let ctype, _ = x in to_ocaml_typename ctype) in
+           Printf.fprintf out_ml "external %s : %s = \"%s\"\n" (Array.get fn 2) (String.concat ~sep:" -> " ocaml_args) (Array.get fn 2)
+        ) with
         | InvalidFunction x ->
-          printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 1) x;
+          printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;
           ())
       | _ -> ());
       (* printf "Continue %s\n" x; *)
@@ -148,6 +164,7 @@ let process_header_file preamble_file filepath output =
 
 ;;
 process_header_file
-  "/home/blake/libgpiod_ocaml/src/ml_gpiod_prelude.c"
-  "/home/blake/libgpiod_ocaml/libgpiod/include/gpiod.h"
-  "/home/blake/libgpiod_ocaml/src/ml_gpiod.c"
+  "/home/blake/ocamlGpiod/src/ml_gpiod_prelude.c"
+  "/home/blake/ocamlGpiod/libgpiod/include/gpiod.h"
+  "/home/blake/ocamlGpiod/src/gpiod_stubs.c"
+  "/home/blake/ocamlGpiod/src/gpiod.ml"

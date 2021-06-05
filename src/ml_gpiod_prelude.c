@@ -10,13 +10,11 @@
 
 static value val_of_ptr(void* p)
 {
-  value v = caml_alloc(1, Abstract_tag);
-  *((void **) Data_abstract_val(v)) = p;
-  return v;
+  return caml_copy_nativeint((intnat) p);
 }
 
 static void* ptr_of_val(value v) {
-  return *((void **) Data_abstract_val(v));
+  return (void *) Nativeint_val(v);
 }
 
 
