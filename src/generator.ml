@@ -164,7 +164,7 @@ let process_header_file preamble_file filepath output_c output_ml =
 
 ;;
 process_header_file
-  "/home/blake/ocamlGpiod/src/ml_gpiod_prelude.c"
-  "/home/blake/ocamlGpiod/libgpiod/include/gpiod.h"
-  "/home/blake/ocamlGpiod/src/gpiod_stubs.c"
-  "/home/blake/ocamlGpiod/src/gpiod.ml"
+  "src/ml_gpiod_prelude.c"
+  "libgpiod/include/gpiod.h"
+  "src/gpiod_stubs.c"
+  "src/gpiod.ml"
