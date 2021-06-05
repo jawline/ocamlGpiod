@@ -1,8 +1,0 @@
-(lang dune 2.0)
-(name generator)
-(package
-  (name generator)
-  (synopsis "A tool to generate Ocaml bindings using the public gpiod header")
-  (depends core)
-  (authors "Blake Loring")
-)
