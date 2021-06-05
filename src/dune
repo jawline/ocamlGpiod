@@ -3,4 +3,11 @@
   (public_name gpiod)
   (foreign_stubs (language c) (names ml_gpiod))
   (c_library_flags :standard -lgpiod)
+  (modules )
   (libraries base stdio))
+
+(executable
+  (name generator)
+  (libraries core re)
+  (modules generator)
+)
