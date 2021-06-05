@@ -31,7 +31,7 @@ let to_value_type name arg_type =
 
 let to_ocaml_typename arg_type =
   match arg_type with
-  | "void" -> "()"
+  | "void" -> "unit"
   | "int" -> "int"
   | "unsigned int" -> "int"
   | "bool" -> "bool"
@@ -48,6 +48,7 @@ let generate_function_binding name arguments return_type =
         let _, name = x in
         sprintf "value %s" name)
   in
+  let inp_arguments = if List.length inp_arguments = 0 then ["value unused_unit"] else inp_arguments in
   let inp_arguments = String.concat ~sep:", " inp_arguments in
   let conv_args =
     List.map arguments ~f:(fun x ->
@@ -149,8 +150,9 @@ let process_header_file preamble_file filepath output_c output_ml =
                (String.strip (Array.get fn 1))
            in
            Printf.fprintf out_file "%s\n" generated_fn;
+           let processed_arguments = if List.length processed_arguments = 0 then [("void", "unit_arg")] else processed_arguments in
            let ocaml_args = List.map (List.append processed_arguments [(String.strip (Array.get fn 1), "return")]) ~f:(fun x -> let ctype, _ = x in to_ocaml_typename ctype) in
-           Printf.fprintf out_ml "external %s : %s = \"%s\"\n" (Array.get fn 2) (String.concat ~sep:" -> " ocaml_args) (Array.get fn 2)
+           Printf.fprintf out_ml "external %s : %s = \"ocaml_%s\"\n" (Array.get fn 2) (String.concat ~sep:" -> " ocaml_args) (Array.get fn 2)
         ) with
         | InvalidFunction x ->
           printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;

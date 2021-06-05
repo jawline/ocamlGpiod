@@ -290,7 +290,7 @@ value ocaml_gpiod_line_event_read_fd_multiple(value fd, value events, value num_
 	return Val_int(gpiod_line_event_read_fd_multiple(Int_val(fd), ((struct gpiod_line_event *) ptr_of_val(events)), Int_val(num_events)));
 }
 
-value ocaml_gpiod_version_string() {
+value ocaml_gpiod_version_string(value unused_unit) {
 	return caml_copy_string(gpiod_version_string());
 }
 
