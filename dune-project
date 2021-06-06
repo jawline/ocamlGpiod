@@ -1,8 +1,9 @@
 (lang dune 2.8)
 (name gpiod)
-(license BSD)
+(license BSD-3-Clause)
 (generate_opam_files true)
 (authors "Blake Loring")
+(source (github jawline/ocamlGpiod))
 (package
   (name gpiod)
   (synopsis "A wrapper around the C libgpiod library for GPIO on recent (>4.8) Linux kernels")
