@@ -153,11 +153,6 @@ let process_header_file preamble_file filepath output_c output_ml =
       (match line_match with
       | Some fn ->
         (try
-           printf
-             "Processing: %s %s %s\n"
-             (Array.get fn 1)
-             (Array.get fn 2)
-             (Array.get fn 3);
            let processed_arguments = extract_arguments (Array.get fn 3) in
            let generated_fn =
              generate_function_binding
