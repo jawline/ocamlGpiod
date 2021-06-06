@@ -35,7 +35,7 @@ let to_ocaml_typename arg_type =
   | "int" -> "int"
   | "unsigned int" -> "int"
   | "bool" -> "bool"
-  | "char *" | "const char *" | "char const *"  -> "string"
+  | "char *" | "const char *" | "char const *" -> "string"
   | _ ->
     if String.is_suffix arg_type ~suffix:"*"
     then "nativeint"
@@ -48,7 +48,9 @@ let generate_function_binding name arguments return_type =
         let _, name = x in
         sprintf "value %s" name)
   in
-  let inp_arguments = if List.length inp_arguments = 0 then ["value unused_unit"] else inp_arguments in
+  let inp_arguments =
+    if List.length inp_arguments = 0 then [ "value unused_unit" ] else inp_arguments
+  in
   let inp_arguments = String.concat ~sep:", " inp_arguments in
   let conv_args =
     List.map arguments ~f:(fun x ->
@@ -140,7 +142,7 @@ let process_header_file preamble_file filepath output_c output_ml =
       let line_match = test_line x in
       (match line_match with
       | Some fn ->
-        (try (
+        (try
            (* printf "Parts %s %s %s\n" (Array.get fn 1) (Array.get fn 2) (Array.get fn 3); *)
            let processed_arguments = extract_arguments (Array.get fn 3) in
            let generated_fn =
@@ -150,10 +152,27 @@ let process_header_file preamble_file filepath output_c output_ml =
                (String.strip (Array.get fn 1))
            in
            Printf.fprintf out_file "%s\n" generated_fn;
-           let processed_arguments = if List.length processed_arguments = 0 then [("void", "unit_arg")] else processed_arguments in
-           let ocaml_args = List.map (List.append processed_arguments [(String.strip (Array.get fn 1), "return")]) ~f:(fun x -> let ctype, _ = x in to_ocaml_typename ctype) in
-           Printf.fprintf out_ml "external %s : %s = \"ocaml_%s\"\n" (Array.get fn 2) (String.concat ~sep:" -> " ocaml_args) (Array.get fn 2)
-        ) with
+           let processed_arguments =
+             if List.length processed_arguments = 0
+             then [ "void", "unit_arg" ]
+             else processed_arguments
+           in
+           let ocaml_args =
+             List.map
+               (List.append
+                  processed_arguments
+                  [ String.strip (Array.get fn 1), "return" ])
+               ~f:(fun x ->
+                 let ctype, _ = x in
+                 to_ocaml_typename ctype)
+           in
+           Printf.fprintf
+             out_ml
+             "external %s : %s = \"ocaml_%s\"\n"
+             (Array.get fn 2)
+             (String.concat ~sep:" -> " ocaml_args)
+             (Array.get fn 2)
+         with
         | InvalidFunction x ->
           printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;
           ())
@@ -166,7 +185,7 @@ let process_header_file preamble_file filepath output_c output_ml =
 
 ;;
 process_header_file
-  "src/ml_gpiod_prelude.c"
+  "src/gpiod_prelude.c"
   "libgpiod/include/gpiod.h"
   "src/gpiod_stubs.c"
   "src/gpiod.ml"
