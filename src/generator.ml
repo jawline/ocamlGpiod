@@ -107,6 +107,10 @@ let test_line line =
   | _ -> None
 ;;
 
+let strip_gpiod xs =
+  if String.is_prefix ~prefix:"gpiod_" xs then String.drop_prefix xs 6 else xs
+;;
+
 let extract_arguments args_str =
   if String.( = ) (String.strip args_str) "void"
   then []
@@ -133,7 +137,7 @@ let process_header_file preamble_file filepath output_c output_ml =
   let lines = String.to_list lines in
   let lines = remove_tabs lines in
   let lines = remove_double_spaces lines in
-  Printf.fprintf out_ml "let gpio_is_null (x: nativeint): bool = Nativeint.(=) x 0;;\n";
+  Printf.fprintf out_ml "let is_null (x: nativeint): bool = x = Nativeint.zero;;\n";
   let lines =
     List.map ~f:(fun x -> String.of_char_list x) (full_split [ ';'; '/' ] lines)
   in
@@ -170,7 +174,7 @@ let process_header_file preamble_file filepath output_c output_ml =
            Printf.fprintf
              out_ml
              "external %s : %s = \"ocaml_%s\"\n"
-             (Array.get fn 2)
+             (strip_gpiod (Array.get fn 2))
              (String.concat ~sep:" -> " ocaml_args)
              (Array.get fn 2)
          with
