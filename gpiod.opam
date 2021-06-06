@@ -12,6 +12,7 @@ depends: [
   "dune" {>= "2.8"}
   "re"
   "core"
+  "ocaml" {>= "4.08.0"}
   "odoc" {with-doc}
 ]
 build: [
@@ -32,5 +33,5 @@ dev-repo: "git+https://github.com/jawline/ocamlGpiod.git"
 depexts: [
   "libgpiod-dev"
 ]
-available: [ ocaml-version >= "4.08.0" & os = "linux" & os-family = "debian"  ]
+available: [ os = "linux" & os-family = "debian"  ]
 
