@@ -5,25 +5,23 @@ exception InvalidFunction of string
 let printf = Printf.printf
 let sprintf = Printf.sprintf
 
-let prelude = "#include <gpiod.h>
-#include <assert.h>
-#include <errno.h>
-#include <string.h>
-#include <stdio.h>
-#include <caml/mlvalues.h>
-#include <caml/memory.h>
-#include <caml/alloc.h>
-#include <caml/fail.h>
-
-static value val_of_ptr(void* p)
-{
-  return caml_copy_nativeint((intnat) p);
-}
-
-static void* ptr_of_val(value v) {
-  return (void *) Nativeint_val(v);
-}
-"
+let prelude =
+  "#include <gpiod.h>\n\
+   #include <assert.h>\n\
+   #include <errno.h>\n\
+   #include <string.h>\n\
+   #include <stdio.h>\n\
+   #include <caml/mlvalues.h>\n\
+   #include <caml/memory.h>\n\
+   #include <caml/alloc.h>\n\
+   #include <caml/fail.h>\n\n\
+   static value val_of_ptr(void* p)\n\
+   {\n\
+  \  return caml_copy_nativeint((intnat) p);\n\
+   }\n\n\
+   static void* ptr_of_val(value v) {\n\
+  \  return (void *) Nativeint_val(v);\n\
+   }\n"
 ;;
 
 let from_value_type name arg_type =
@@ -134,7 +132,10 @@ let test_line line =
 ;;
 
 let strip_gpiod xs =
-  if String.is_prefix ~prefix:"gpiod_" xs then String.drop_prefix xs 6 else xs
+  let gpiod_prefix = "gpiod_" in
+  if String.is_prefix ~prefix:gpiod_prefix xs
+  then String.drop_prefix xs (String.length gpiod_prefix)
+  else xs
 ;;
 
 let extract_arguments args_str =
@@ -152,63 +153,67 @@ let extract_arguments args_str =
           String.strip l, String.strip r))
 ;;
 
+let split_header_at_functions header =
+  let header = String.filter header ~f:(fun x -> not (Char.( = ) x '\n')) in
+  let header = String.to_list header in
+  let header = remove_tabs header in
+  let header = remove_double_spaces header in
+  List.map ~f:(fun x -> String.of_char_list x) (full_split [ ';'; '/' ] header)
+;;
+
+let process_header_line out_file out_ml line =
+  let line_match = test_line line in
+  match line_match with
+  | Some fn ->
+    (try
+       printf "Generating binding for %s\n" (Array.get fn 2);
+       let processed_arguments = extract_arguments (Array.get fn 3) in
+       let generated_fn =
+         generate_function_binding
+           (String.strip (Array.get fn 2))
+           processed_arguments
+           (String.strip (Array.get fn 1))
+       in
+       Printf.fprintf out_file "%s\n" generated_fn;
+       if List.length processed_arguments > 5
+       then raise (InvalidFunction "too many arguments");
+       let processed_arguments =
+         if List.length processed_arguments = 0
+         then [ "void", "unit_arg" ]
+         else processed_arguments
+       in
+       let ocaml_args =
+         List.map
+           (List.append processed_arguments [ String.strip (Array.get fn 1), "return" ])
+           ~f:(fun x ->
+             let ctype, _ = x in
+             to_ocaml_typename ctype)
+       in
+       Printf.fprintf
+         out_ml
+         "external %s : %s = \"ocaml_%s\"\n"
+         (strip_gpiod (Array.get fn 2))
+         (String.concat ~sep:" -> " ocaml_args)
+         (Array.get fn 2)
+     with
+    | InvalidFunction x ->
+      printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;
+      ())
+  | _ -> ()
+;;
+
 let process_header_file filepath output_c output_ml =
   printf "Launching in %s\n" (Sys.getcwd ());
   let out_file = Out_channel.create output_c in
   let out_ml = Out_channel.create output_ml in
+  let header = In_channel.read_all filepath in
+  let lines = split_header_at_functions header in
   Printf.fprintf out_file "%s" prelude;
-  let lines = In_channel.read_all filepath in
-  let lines = String.filter lines ~f:(function x -> not (Char.( = ) x '\n')) in
-  let lines = String.to_list lines in
-  let lines = remove_tabs lines in
-  let lines = remove_double_spaces lines in
   Printf.fprintf out_ml "let is_null (x: nativeint): bool = x = Nativeint.zero;;\n";
-  let lines =
-    List.map ~f:(fun x -> String.of_char_list x) (full_split [ ';'; '/' ] lines)
-  in
   let rec do_lines = function
     | [] -> ()
-    | x :: xs ->
-      let line_match = test_line x in
-      (match line_match with
-      | Some fn ->
-        (try
-           printf "Generating binding for %s\n" (Array.get fn 2);
-           let processed_arguments = extract_arguments (Array.get fn 3) in
-           let generated_fn =
-             generate_function_binding
-               (String.strip (Array.get fn 2))
-               processed_arguments
-               (String.strip (Array.get fn 1))
-           in
-           Printf.fprintf out_file "%s\n" generated_fn;
-           if List.length processed_arguments > 5
-           then raise (InvalidFunction "too many arguments");
-           let processed_arguments =
-             if List.length processed_arguments = 0
-             then [ "void", "unit_arg" ]
-             else processed_arguments
-           in
-           let ocaml_args =
-             List.map
-               (List.append
-                  processed_arguments
-                  [ String.strip (Array.get fn 1), "return" ])
-               ~f:(fun x ->
-                 let ctype, _ = x in
-                 to_ocaml_typename ctype)
-           in
-           Printf.fprintf
-             out_ml
-             "external %s : %s = \"ocaml_%s\"\n"
-             (strip_gpiod (Array.get fn 2))
-             (String.concat ~sep:" -> " ocaml_args)
-             (Array.get fn 2)
-         with
-        | InvalidFunction x ->
-          printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;
-          ())
-      | _ -> ());
+    | line :: xs ->
+      process_header_line out_file out_ml line;
       (* printf "Continue %s\n" x; *)
       do_lines xs
   in
