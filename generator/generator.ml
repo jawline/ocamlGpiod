@@ -5,6 +5,27 @@ exception InvalidFunction of string
 let printf = Printf.printf
 let sprintf = Printf.sprintf
 
+let prelude = "#include <gpiod.h>
+#include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+#include <caml/mlvalues.h>
+#include <caml/memory.h>
+#include <caml/alloc.h>
+#include <caml/fail.h>
+
+static value val_of_ptr(void* p)
+{
+  return caml_copy_nativeint((intnat) p);
+}
+
+static void* ptr_of_val(value v) {
+  return (void *) Nativeint_val(v);
+}
+"
+;;
+
 let from_value_type name arg_type =
   match arg_type with
   | "int" -> sprintf "Int_val(%s)" name
@@ -131,11 +152,10 @@ let extract_arguments args_str =
           String.strip l, String.strip r))
 ;;
 
-let process_header_file preamble_file filepath output_c output_ml =
+let process_header_file filepath output_c output_ml =
   printf "Launching in %s\n" (Sys.getcwd ());
   let out_file = Out_channel.create output_c in
   let out_ml = Out_channel.create output_ml in
-  let prelude = In_channel.read_all preamble_file in
   Printf.fprintf out_file "%s" prelude;
   let lines = In_channel.read_all filepath in
   let lines = String.filter lines ~f:(function x -> not (Char.( = ) x '\n')) in
@@ -195,4 +215,4 @@ let process_header_file preamble_file filepath output_c output_ml =
 ;;
 
 ;;
-process_header_file "gpiod_prelude.c" "/usr/include/gpiod.h" "gpiod_stubs.c" "gpiod.ml"
+process_header_file "/usr/include/gpiod.h" "gpiod_stubs.c" "gpiod.ml"
