@@ -161,45 +161,54 @@ let split_header_at_functions header =
   List.map ~f:(fun x -> String.of_char_list x) (full_split [ ';'; '/' ] header)
 ;;
 
+let as_ocaml_type_signature args return_type =
+  String.concat
+    ~sep:" -> "
+    (List.map
+       (List.append args [ return_type, "return" ])
+       ~f:(fun x ->
+         let ctype, _ = x in
+         to_ocaml_typename ctype))
+;;
+
+let process_identified_method out_file out_ml function_parts arguments =
+  let return_type = String.strip (Array.get function_parts 1) in
+  let function_name = String.strip (Array.get function_parts 2) in
+  printf "Generating binding for %s\n" function_name;
+  let generated_fn = generate_function_binding function_name arguments return_type in
+  Printf.fprintf out_file "%s\n" generated_fn;
+  let arguments =
+    if List.length arguments = 0 then [ "void", "unit_arg" ] else arguments
+  in
+  Printf.fprintf
+    out_ml
+    "external %s : %s = \"ocaml_%s\"\n"
+    (strip_gpiod function_name)
+    (as_ocaml_type_signature arguments return_type)
+    function_name
+;;
+
 let process_header_line out_file out_ml line =
   let line_match = test_line line in
   match line_match with
   | Some fn ->
     (try
-       printf "Generating binding for %s\n" (Array.get fn 2);
-       let processed_arguments = extract_arguments (Array.get fn 3) in
-       let generated_fn =
-         generate_function_binding
-           (String.strip (Array.get fn 2))
-           processed_arguments
-           (String.strip (Array.get fn 1))
-       in
-       Printf.fprintf out_file "%s\n" generated_fn;
-       if List.length processed_arguments > 5
-       then raise (InvalidFunction "too many arguments");
-       let processed_arguments =
-         if List.length processed_arguments = 0
-         then [ "void", "unit_arg" ]
-         else processed_arguments
-       in
-       let ocaml_args =
-         List.map
-           (List.append processed_arguments [ String.strip (Array.get fn 1), "return" ])
-           ~f:(fun x ->
-             let ctype, _ = x in
-             to_ocaml_typename ctype)
-       in
-       Printf.fprintf
-         out_ml
-         "external %s : %s = \"ocaml_%s\"\n"
-         (strip_gpiod (Array.get fn 2))
-         (String.concat ~sep:" -> " ocaml_args)
-         (Array.get fn 2)
+       let arguments = extract_arguments (Array.get fn 3) in
+       if List.length arguments > 5
+       then raise (InvalidFunction "too many arguments")
+       else process_identified_method out_file out_ml fn arguments
      with
     | InvalidFunction x ->
       printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;
       ())
   | _ -> ()
+;;
+
+let rec process_header_lines out_file out_ml = function
+  | [] -> ()
+  | line :: remaining_lines ->
+    process_header_line out_file out_ml line;
+    process_header_lines out_file out_ml remaining_lines
 ;;
 
 let process_header_file filepath output_c output_ml =
@@ -210,14 +219,7 @@ let process_header_file filepath output_c output_ml =
   let lines = split_header_at_functions header in
   Printf.fprintf out_file "%s" prelude;
   Printf.fprintf out_ml "let is_null (x: nativeint): bool = x = Nativeint.zero;;\n";
-  let rec do_lines = function
-    | [] -> ()
-    | line :: xs ->
-      process_header_line out_file out_ml line;
-      (* printf "Continue %s\n" x; *)
-      do_lines xs
-  in
-  do_lines lines
+  process_header_lines out_file out_ml lines
 ;;
 
 ;;
