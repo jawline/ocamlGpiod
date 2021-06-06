@@ -103,7 +103,9 @@ let rec remove_double_spaces xs =
 ;;
 
 let test_line line =
-  let matcher = Re.Pcre.regexp "^\\s*([a-zA-Z0-9_]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)].*;" in
+  let matcher =
+    Re.Pcre.regexp "^\\s*([a-zA-Z0-9_]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)].*;"
+  in
   let matched = Re.exec_opt matcher line in
   match matched with
   | Some matched -> Some (Re.Group.all matched)
@@ -151,7 +153,11 @@ let process_header_file preamble_file filepath output_c output_ml =
       (match line_match with
       | Some fn ->
         (try
-           printf "Processing: %s %s %s\n" (Array.get fn 1) (Array.get fn 2) (Array.get fn 3);
+           printf
+             "Processing: %s %s %s\n"
+             (Array.get fn 1)
+             (Array.get fn 2)
+             (Array.get fn 3);
            let processed_arguments = extract_arguments (Array.get fn 3) in
            let generated_fn =
              generate_function_binding
@@ -160,7 +166,8 @@ let process_header_file preamble_file filepath output_c output_ml =
                (String.strip (Array.get fn 1))
            in
            Printf.fprintf out_file "%s\n" generated_fn;
-           if List.length processed_arguments > 5 then raise (InvalidFunction "too many arguments");
+           if List.length processed_arguments > 5
+           then raise (InvalidFunction "too many arguments");
            let processed_arguments =
              if List.length processed_arguments = 0
              then [ "void", "unit_arg" ]
@@ -193,8 +200,4 @@ let process_header_file preamble_file filepath output_c output_ml =
 ;;
 
 ;;
-process_header_file
-  "gpiod_prelude.c"
-  "/usr/include/gpiod.h"
-  "gpiod_stubs.c"
-  "gpiod.ml"
+process_header_file "gpiod_prelude.c" "/usr/include/gpiod.h" "gpiod_stubs.c" "gpiod.ml"
