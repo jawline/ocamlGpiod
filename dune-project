@@ -11,5 +11,5 @@
   (maintainers "Blake Loring <blake@parsed.uk>")
   (homepage "https://github.com/jawline/ocamlGpiod/")
   (bug_reports "https://github.com/jawline/ocamlGpiod/")
-  (version 0.2)
+  (version 0.3)
 )

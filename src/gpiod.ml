@@ -1,3 +1,5 @@
+let gpio_is_null (x : nativeint) : bool = Nativeint.( = ) x 0
+
 external gpiod_is_gpiochip_device : string -> bool = "ocaml_gpiod_is_gpiochip_device"
 external gpiod_chip_open : string -> nativeint = "ocaml_gpiod_chip_open"
 external gpiod_chip_ref : nativeint -> nativeint = "ocaml_gpiod_chip_ref"

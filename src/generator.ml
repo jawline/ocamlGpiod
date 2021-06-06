@@ -133,6 +133,7 @@ let process_header_file preamble_file filepath output_c output_ml =
   let lines = String.to_list lines in
   let lines = remove_tabs lines in
   let lines = remove_double_spaces lines in
+  Printf.fprintf out_ml "let gpio_is_null (x: nativeint): bool = Nativeint.(=) x 0;;\n";
   let lines =
     List.map ~f:(fun x -> String.of_char_list x) (full_split [ ';'; '/' ] lines)
   in
