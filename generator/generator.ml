@@ -179,7 +179,7 @@ let process_identified_method out_file out_ml function_parts arguments =
   let return_type = String.strip (Array.get function_parts 1) in
   let function_name = String.strip (Array.get function_parts 2) in
   let generated_fn = generate_function_binding function_name arguments return_type in
-  printf "Writing binding for %s\n" function_name;
+  (* printf "Writing binding for %s\n" function_name; *)
   Printf.fprintf out_file "%s\n" generated_fn;
   Printf.fprintf
     out_ml
