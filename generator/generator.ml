@@ -103,7 +103,7 @@ let rec remove_double_spaces xs =
 ;;
 
 let test_line line =
-  let matcher = Re.Pcre.regexp "^\\s*([a-zA-Z0-9_]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)].*[;{]" in
+  let matcher = Re.Pcre.regexp "^\\s*([a-zA-Z0-9_]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)].*;" in
   let matched = Re.exec_opt matcher line in
   match matched with
   | Some matched -> Some (Re.Group.all matched)
