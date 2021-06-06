@@ -12,9 +12,6 @@ depends: [
   "dune" {>= "2.8"}
   "odoc" {with-doc}
 ]
-depexts: [
-  ["libgpiod-dev"]
-]
 build: [
   ["dune" "subst"] {dev}
   [

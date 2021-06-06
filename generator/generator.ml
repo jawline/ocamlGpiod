@@ -2,6 +2,7 @@ open Core
 
 exception InvalidFunction of string
 
+let printf = Printf.printf
 let sprintf = Printf.sprintf
 
 let from_value_type name arg_type =
@@ -20,6 +21,7 @@ let to_value_type name arg_type =
   match arg_type with
   | "void" -> sprintf "Val_unit"
   | "int" -> sprintf "Val_int(%s)" name
+  | "size_t" -> sprintf "caml_copy_nativeint((intnat) %s)" name
   | "unsigned int" -> sprintf "Val_int(%s)" name
   | "bool" -> sprintf "Val_bool(%s)" name
   | "char *" | "const char *" | "char const *" -> sprintf "caml_copy_string(%s)" name
@@ -35,6 +37,7 @@ let to_ocaml_typename arg_type =
   | "int" -> "int"
   | "unsigned int" -> "int"
   | "bool" -> "bool"
+  | "size_t" -> "nativeint"
   | "char *" | "const char *" | "char const *" -> "string"
   | _ ->
     if String.is_suffix arg_type ~suffix:"*"
@@ -100,7 +103,7 @@ let rec remove_double_spaces xs =
 ;;
 
 let test_line line =
-  let matcher = Re.Pcre.regexp "\\s*(.*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)];" in
+  let matcher = Re.Pcre.regexp "^\\s*([a-zA-Z0-9_]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)].*[;{]" in
   let matched = Re.exec_opt matcher line in
   match matched with
   | Some matched -> Some (Re.Group.all matched)
@@ -127,7 +130,7 @@ let extract_arguments args_str =
 ;;
 
 let process_header_file preamble_file filepath output_c output_ml =
-  printf "Starting to read\n";
+  printf "Launching in %s\n" (Sys.getcwd ());
   let out_file = Out_channel.create output_c in
   let out_ml = Out_channel.create output_ml in
   let prelude = In_channel.read_all preamble_file in
@@ -148,7 +151,7 @@ let process_header_file preamble_file filepath output_c output_ml =
       (match line_match with
       | Some fn ->
         (try
-           (* printf "Parts %s %s %s\n" (Array.get fn 1) (Array.get fn 2) (Array.get fn 3); *)
+           printf "Processing: %s %s %s\n" (Array.get fn 1) (Array.get fn 2) (Array.get fn 3);
            let processed_arguments = extract_arguments (Array.get fn 3) in
            let generated_fn =
              generate_function_binding
@@ -157,6 +160,7 @@ let process_header_file preamble_file filepath output_c output_ml =
                (String.strip (Array.get fn 1))
            in
            Printf.fprintf out_file "%s\n" generated_fn;
+           if List.length processed_arguments > 5 then raise (InvalidFunction "too many arguments");
            let processed_arguments =
              if List.length processed_arguments = 0
              then [ "void", "unit_arg" ]
@@ -190,7 +194,7 @@ let process_header_file preamble_file filepath output_c output_ml =
 
 ;;
 process_header_file
-  "src/gpiod_prelude.c"
-  "libgpiod/include/gpiod.h"
-  "src/gpiod_stubs.c"
-  "src/gpiod.ml"
+  "gpiod_prelude.c"
+  "/usr/include/gpiod.h"
+  "gpiod_stubs.c"
+  "gpiod.ml"

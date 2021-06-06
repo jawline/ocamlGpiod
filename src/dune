@@ -1,3 +1,8 @@
+(rule
+ (targets gpiod.ml gpiod_stubs.c)
+ (deps    (:gen ../generator/generator.exe))
+ (action  (run %{gen})))
+
 (library
  (name gpiod)
  (public_name gpiod)
@@ -7,8 +12,3 @@
  (c_library_flags (-lgpiod))
  (modules gpiod)
 )
-
-(executable
- (name generator)
- (libraries core re)
- (modules generator))
