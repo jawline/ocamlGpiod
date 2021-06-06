@@ -125,7 +125,7 @@ let rec remove_double_spaces xs =
 
 let test_line line =
   let matcher =
-    Re.Pcre.regexp "^\\s*([a-zA-Z0-9_]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)].*;"
+    Re.Pcre.regexp "^\\s*([a-zA-Z0-9_ ]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)]"
   in
   let matched = Re.exec_opt matcher line in
   match matched with
@@ -173,6 +173,7 @@ let process_header_file filepath output_c output_ml =
       (match line_match with
       | Some fn ->
         (try
+           printf "Generating binding for %s\n" (Array.get fn 2);
            let processed_arguments = extract_arguments (Array.get fn 3) in
            let generated_fn =
              generate_function_binding
