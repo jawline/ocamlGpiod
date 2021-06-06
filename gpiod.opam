@@ -12,6 +12,9 @@ depends: [
   "dune" {>= "2.8"}
   "odoc" {with-doc}
 ]
+depexts: [
+  ["libsdl2-dev"]
+]
 build: [
   ["dune" "subst"] {dev}
   [
