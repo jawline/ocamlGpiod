@@ -4,8 +4,9 @@
  (foreign_stubs
   (language c)
   (names gpiod_stubs))
- (c_library_flags :standard -lgpiod)
- (modules gpiod))
+ (c_library_flags (-lgpiod))
+ (modules gpiod)
+)
 
 (executable
  (name generator)
