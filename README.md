@@ -9,4 +9,4 @@ still need to be called.
 
 ### Dependencies
 
-Requires libgpiod to be installed [link](https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git/about/).
+Requires libgpiod to be installed \([link](https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git/about/)\).
