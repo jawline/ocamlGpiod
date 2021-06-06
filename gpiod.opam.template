@@ -1,4 +1,5 @@
 depexts: [
   "libgpiod-dev"
 ]
-available: [ os = "linux" ]
+available: [ os = "linux" & os-family = "debian"  ]
+
