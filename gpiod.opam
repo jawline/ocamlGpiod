@@ -10,7 +10,6 @@ homepage: "https://github.com/jawline/ocamlGpiod/"
 bug-reports: "https://github.com/jawline/ocamlGpiod/"
 depends: [
   "dune" {>= "2.8"}
-  "base"
   "odoc" {with-doc}
 ]
 build: [

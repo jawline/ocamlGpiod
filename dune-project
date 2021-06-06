@@ -6,7 +6,6 @@
 (package
   (name gpiod)
   (synopsis "A wrapper around the C libgpiod library for GPIO on recent (>4.8) Linux kernels")
-  (depends base)
   (authors "Blake Loring")
   (maintainers "Blake Loring <blake@parsed.uk>")
   (homepage "https://github.com/jawline/ocamlGpiod/")
