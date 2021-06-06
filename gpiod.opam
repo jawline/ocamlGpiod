@@ -27,3 +27,6 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/jawline/ocamlGpiod.git"
+depexts: [
+  "libgpiod-dev"
+]

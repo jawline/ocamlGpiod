@@ -162,24 +162,25 @@ let split_header_at_functions header =
 ;;
 
 let as_ocaml_type_signature args return_type =
-  String.concat
-    ~sep:" -> "
-    (List.map
+  let args =
+    if List.length args = 0 then [ "void", "unit_arg" ] else args
+  in
+  let signature_parts = List.map
        (List.append args [ return_type, "return" ])
        ~f:(fun x ->
          let ctype, _ = x in
-         to_ocaml_typename ctype))
+         to_ocaml_typename ctype) in
+  String.concat
+    ~sep:" -> "
+    signature_parts
 ;;
 
 let process_identified_method out_file out_ml function_parts arguments =
   let return_type = String.strip (Array.get function_parts 1) in
   let function_name = String.strip (Array.get function_parts 2) in
-  printf "Generating binding for %s\n" function_name;
   let generated_fn = generate_function_binding function_name arguments return_type in
+  printf "Writing binding for %s\n" function_name;
   Printf.fprintf out_file "%s\n" generated_fn;
-  let arguments =
-    if List.length arguments = 0 then [ "void", "unit_arg" ] else arguments
-  in
   Printf.fprintf
     out_ml
     "external %s : %s = \"ocaml_%s\"\n"
@@ -222,5 +223,4 @@ let process_header_file filepath output_c output_ml =
   process_header_lines out_file out_ml lines
 ;;
 
-;;
 process_header_file "/usr/include/gpiod.h" "gpiod_stubs.c" "gpiod.ml"
