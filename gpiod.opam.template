@@ -1,5 +1,5 @@
 depexts: [
   "libgpiod-dev"
 ]
-available: [ os = "linux" & os-family = "debian"  ]
+available: [ ocaml-version >= "4.08.0" & os = "linux" & os-family = "debian"  ]
 

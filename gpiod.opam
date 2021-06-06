@@ -32,5 +32,5 @@ dev-repo: "git+https://github.com/jawline/ocamlGpiod.git"
 depexts: [
   "libgpiod-dev"
 ]
-available: [ os = "linux" & os-family = "debian"  ]
+available: [ ocaml-version >= "4.08.0" & os = "linux" & os-family = "debian"  ]
 
