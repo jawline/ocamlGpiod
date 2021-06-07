@@ -10,7 +10,7 @@ let gpio_test_pi () =
   printf "preparing call\n";
   let s = (Gpiod.version_string ()) in
   printf "done %s\n" s;
-  let chip = Gpiod.chip_open "gpiochip0" in
+  let chip = Gpiod.chip_open_by_name "gpiochip0" in
   check chip;
   let lineRed = Gpiod.chip_get_line chip 24 in
   let lineYellow = Gpiod.chip_get_line chip 25 in
