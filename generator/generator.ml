@@ -2,9 +2,6 @@ open Core
 
 exception InvalidFunction of string
 
-let printf = Printf.printf
-let sprintf = Printf.sprintf
-
 let prelude =
   "#include <gpiod.h>\n\
    #include <assert.h>\n\
@@ -180,8 +177,8 @@ let process_identified_method out_file out_ml function_parts arguments =
   let function_name = String.strip (Array.get function_parts 2) in
   let generated_fn = generate_function_binding function_name arguments return_type in
   (* printf "Writing binding for %s\n" function_name; *)
-  Printf.fprintf out_file "%s\n" generated_fn;
-  Printf.fprintf
+  fprintf out_file "%s\n" generated_fn;
+  fprintf
     out_ml
     "external %s : %s = \"ocaml_%s\"\n"
     (strip_gpiod function_name)
@@ -218,8 +215,8 @@ let process_header_file filepath output_c output_ml =
   let out_ml = Out_channel.create output_ml in
   let header = In_channel.read_all filepath in
   let lines = split_header_at_functions header in
-  Printf.fprintf out_file "%s" prelude;
-  Printf.fprintf out_ml "let is_null (x: nativeint): bool = x = Nativeint.zero;;\n";
+  fprintf out_file "%s" prelude;
+  fprintf out_ml "let is_null (x: nativeint): bool = x = Nativeint.zero;;\n";
   process_header_lines out_file out_ml lines
 ;;
 
