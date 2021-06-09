@@ -1,5 +1,9 @@
 depexts: [
-  "libgpiod-dev"
+  "libgpiod-dev" { os-distribution = "alpine" }
+  "libgpiod-dev" { os-distribution = "debian" }
+  "libgpiod" { os-distribution = "fedora" }
+  "libgpiod" { os-distribution = "opensuse" }
+  "libgpiod" { os-distribution = "oraclelinux" }
 ]
-available: [ os = "linux" & os-family = "debian"  ]
+available: [ os = "linux" ]
 
