@@ -1,17 +1,43 @@
 (rule
- (targets gpiod_stubs.ml gpiod_bindings.ml)
+ (targets gpiod_bindings.ml)
  (deps
-  (:stubgen ../stubs/stubs.exe))
+  (:gen ../generator/generator.exe))
  (action
-  (progn
-  (with-stdout-to "gpiod_stubs.ml" (run %{stubgen} -ml))
-  (copy ../bindings/gpiod_bindings.ml gpiod_bindings.ml)
-  )
- )
-)
+  (run %{gen})))
+
+(library
+  (name gpiod_bindings)
+  (public_name gpiod.bindings)
+  (modules gpiod_bindings)
+  (libraries ctypes))
+
+(executable
+ (name stubgen)
+ (modules stubgen)
+ (libraries gpiod.bindings ctypes ctypes.stubs))
+
+(rule
+ (targets stubs.c)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{exe:stubgen.exe} -c))))
+
+(rule
+ (targets stubs.ml)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{exe:stubgen.exe} -ml))))
 
 (library
  (name gpiod)
  (public_name gpiod)
- (libraries ctypes)
- (modules gpiod gpiod_bindings gpiod_stubs))
+ (libraries gpiod.bindings ctypes ctypes.stubs ctypes.foreign)
+ (modules gpiod stubs)
+  (foreign_stubs
+  (language c)
+  (names stubs))
+ (c_library_flags
+  (:standard -lgpiod))
+)

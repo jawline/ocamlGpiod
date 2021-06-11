@@ -1,9 +1,5 @@
 open Printf
 
-Printf.printf "Starting up\n";;
-
-module Gpiod = Gpiod.Stubs(Gpiod_stubs);;
-
 exception InternalError of string
 
 let open_line chip nr =

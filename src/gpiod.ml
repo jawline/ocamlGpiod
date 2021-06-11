@@ -1,1 +1,2 @@
-module Gpiod = Gpiod_bindings.Stubs(Gpiod_stubs)
+module Gpiod = Gpiod_bindings.Stubs(Stubs)
+include Gpiod

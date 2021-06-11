@@ -2,11 +2,10 @@ open Core
 
 exception InvalidFunction of string
 
-let ml_prelude = "
-open Ctypes
-open Foreign
+let ml_prelude = "open Ctypes
 
-module Stubs = functor (S : Cstubs_structs.TYPE) -> struct
+module Stubs (F : Ctypes.FOREIGN) = struct
+  open F
 ";;
 
 let ml_suffix =
