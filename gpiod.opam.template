@@ -4,4 +4,4 @@ depexts: [
   [ "libgpiod-devel" ] { os-family = "fedora" }
   [ "libgpiod-devel" ] { os-distribution = "opensuse" }
 ]
-available: [ os = "linux" & os-distribution != "oracle" & os-distribution != "arch" & os-distribution != "centos" ]
+available: [ os = "linux" ]
