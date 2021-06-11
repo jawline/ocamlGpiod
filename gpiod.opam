@@ -13,6 +13,7 @@ depends: [
   "re"
   "core"
   "ctypes"
+  "ctypes-foreign"
   "ocaml" {>= "4.08.0"}
   "odoc" {with-doc}
 ]
@@ -37,4 +38,4 @@ depexts: [
   [ "libgpiod-devel" ] { os-family = "fedora" }
   [ "libgpiod-devel" ] { os-distribution = "opensuse" }
 ]
-available: [ os = "linux" & os-distribution != "oracle" & os-distribution != "arch" & os-distribution != "centos" ]
+available: [ os = "linux" ]

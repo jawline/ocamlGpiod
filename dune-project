@@ -12,5 +12,5 @@
   (homepage "https://github.com/jawline/ocamlGpiod/")
   (bug_reports "https://github.com/jawline/ocamlGpiod/")
   (version 0.7)
-  (depends re core ctypes (ocaml (>= "4.08.0")))
+  (depends re core ctypes ctypes-foreign (ocaml (>= "4.08.0")))
 )
