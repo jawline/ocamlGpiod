@@ -7,8 +7,8 @@ file on the system. Memory management and reference counting are not taken
 care of by the bindings, so the corresponding reference decrement or free
 methods will still need to be called.
 
-The bindings in this package are primitive, but unlock easy access to GPIO
-ports on kernels with gpiod support. I welcome improvements or full replacement
+The bindings in this package are primitive, but unlock access to GPIO
+ports on all kernels with gpiod support. I welcome improvements or full replacement
 with a pure Ocaml version (Implementation of this would require communication
 of precisely packed structures to the kernel through ioctl calls).
 
