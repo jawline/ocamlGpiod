@@ -1,0 +1,13 @@
+(rule
+ (targets gpiod_bindings.ml)
+ (deps
+  (:gen ../generator/generator.exe))
+ (action
+  (run %{gen})
+ )
+)
+
+(library
+ (name gpiod_bindings)
+ (libraries ctypes.stubs ctypes)
+ (modules gpiod_bindings))

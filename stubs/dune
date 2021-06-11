@@ -1,0 +1,16 @@
+(executable
+ (name stubs_c)
+ (modules stubs_c)
+ (libraries gpiod_bindings ctypes.stubs ctypes))
+
+(rule
+ (targets stubs_c.c)
+ (deps (:stubgen ../stubs/stubs_c.exe))
+ (action (with-stdout-to %{targets} (run %{stubgen} -c))))
+
+(rule (targets stubs.exe)
+ (deps (:first_dep stubs_c.c))
+ (action
+  (bash
+   "%{cc} %{first_dep} -I `dirname %{lib:ctypes:ctypes_cstubs_internals.h}` -I %{ocaml_where} -o %{targets}"))
+)

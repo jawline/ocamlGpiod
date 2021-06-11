@@ -12,6 +12,7 @@ depends: [
   "dune" {>= "2.8"}
   "re"
   "core"
+  "ctypes"
   "ocaml" {>= "4.08.0"}
   "odoc" {with-doc}
 ]
@@ -31,11 +32,9 @@ build: [
 ]
 dev-repo: "git+https://github.com/jawline/ocamlGpiod.git"
 depexts: [
-  "libgpiod-dev" { os-distribution = "alpine" }
-  "libgpiod-dev" { os-distribution = "debian" }
-  "libgpiod" { os-distribution = "fedora" }
-  "libgpiod" { os-distribution = "opensuse" }
-  "libgpiod" { os-distribution = "oraclelinux" }
+  [ "libgpiod-dev" ] { os-distribution = "alpine" }
+  [ "libgpiod-dev" ] { os-family = "debian" }
+  [ "libgpiod-devel" ] { os-family = "fedora" }
+  [ "libgpiod-devel" ] { os-distribution = "opensuse" }
 ]
-available: [ os = "linux" ]
-
+available: [ os = "linux" & os-distribution != "oracle" & os-distribution != "arch" & os-distribution != "centos" ]
