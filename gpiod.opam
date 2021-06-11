@@ -10,10 +10,10 @@ homepage: "https://github.com/jawline/ocamlGpiod/"
 bug-reports: "https://github.com/jawline/ocamlGpiod/"
 depends: [
   "dune" {>= "2.8"}
-  "re"
-  "core"
-  "ctypes"
-  "ctypes-foreign"
+  "re" {>= "1.9.0"}
+  "core" {>= "v0.14.1"}
+  "ctypes" {>= "0.17.1"}
+  "ctypes-foreign" {>= "0.18.0"}
   "ocaml" {>= "4.08.0"}
   "odoc" {with-doc}
 ]
