@@ -177,7 +177,7 @@ let process_header_line seen_names out_ml line =
     | Some parts ->
       let struct_name = String.strip (Array.get parts 1) in
       if not (Hash_set.mem seen_names struct_name) then (
-        fprintf out_ml "type %s = unit ptr\nlet %s : %s typ = ptr void\n\n" struct_name struct_name struct_name;
+        fprintf out_ml "type %s\nlet %s : %s structure typ = structure \"%s\"\n\n" struct_name struct_name struct_name struct_name;
         Hash_set.add seen_names struct_name;
         ()
       ) else (
