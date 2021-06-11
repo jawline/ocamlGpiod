@@ -44,7 +44,7 @@ let to_ocaml_typename arg_type =
   | "unsigned int" -> "int"
   | "bool" -> "bool"
   | "size_t" -> "nativeint"
-  | "char *" | "const char *" | "char const *" -> "string"
+  | "char *" | "const char *" | "char const *" -> "string_opt"
   | _ ->
     if String.is_prefix ~prefix:"struct" arg_type && String.is_suffix ~suffix:"*" arg_type
     then sprintf "ptr_opt %s" (String.strip (String.drop_suffix (String.drop_prefix arg_type 6) 1))
