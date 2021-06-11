@@ -2,85 +2,8 @@ open Core
 
 exception InvalidFunction of string
 
-let prelude =
-  "#include <gpiod.h>\n\
-   #include <assert.h>\n\
-   #include <errno.h>\n\
-   #include <string.h>\n\
-   #include <stdio.h>\n\
-   #include <caml/mlvalues.h>\n\
-   #include <caml/memory.h>\n\
-   #include <caml/alloc.h>\n\
-   #include <caml/fail.h>\n\n\
-   static value val_of_ptr(void* p)\n\
-   {\n\
-  \  return caml_copy_nativeint((intnat) p);\n\
-   }\n\n\
-   static void* ptr_of_val(value v) {\n\
-  \  return (void *) Nativeint_val(v);\n\
-   }\n"
-;;
-
-let from_value_type name arg_type =
-  match arg_type with
-  | "int" -> sprintf "Int_val(%s)" name
-  | "unsigned int" -> sprintf "Int_val(%s)" name
-  | "bool" -> sprintf "Bool_val(%s)" name
-  | "char *" | "const char *" | "char const *" -> sprintf "String_val(%s)" name
-  | _ ->
-    if String.is_suffix arg_type ~suffix:"*"
-    then sprintf "((%s) ptr_of_val(%s))" arg_type name
-    else raise (InvalidFunction (sprintf "Could not match %s" arg_type))
-;;
-
-let to_value_type name arg_type =
-  match arg_type with
-  | "void" -> sprintf "Val_unit"
-  | "int" -> sprintf "Val_int(%s)" name
-  | "size_t" -> sprintf "caml_copy_nativeint((intnat) %s)" name
-  | "unsigned int" -> sprintf "Val_int(%s)" name
-  | "bool" -> sprintf "Val_bool(%s)" name
-  | "char *" | "const char *" | "char const *" -> sprintf "caml_copy_string(%s)" name
-  | _ ->
-    if String.is_suffix arg_type ~suffix:"*"
-    then sprintf "val_of_ptr((void *)%s)" name
-    else raise (InvalidFunction (sprintf "Could not to_value %s" arg_type))
-;;
-
-let to_ocaml_typename arg_type =
-  match arg_type with
-  | "void" -> "unit"
-  | "int" -> "int"
-  | "unsigned int" -> "int"
-  | "bool" -> "bool"
-  | "size_t" -> "nativeint"
-  | "char *" | "const char *" | "char const *" -> "string"
-  | _ ->
-    if String.is_suffix arg_type ~suffix:"*"
-    then "nativeint"
-    else raise (InvalidFunction (sprintf "Could not to_ocaml_typename '%s'" arg_type))
-;;
-
-let generate_function_binding name arguments return_type =
-  let inp_arguments =
-    List.map arguments ~f:(fun x ->
-        let _, name = x in
-        sprintf "value %s" name)
-  in
-  let inp_arguments =
-    if List.length inp_arguments = 0 then [ "value unused_unit" ] else inp_arguments
-  in
-  let inp_arguments = String.concat ~sep:", " inp_arguments in
-  let conv_args =
-    List.map arguments ~f:(fun x ->
-        let arg_type, name = x in
-        from_value_type name arg_type)
-  in
-  let conv_args = String.concat ~sep:", " conv_args in
-  let call_fn = sprintf "%s(%s)" name conv_args in
-  let body = to_value_type call_fn return_type in
-  sprintf "value ocaml_%s(%s) {\n\treturn %s;\n}\n" name inp_arguments body
-;;
+let ml_prelude = "open Ctypes\n\nmodule Stubs (F : Ctypes.FOREIGN) = struct\n  open F\n"
+let ml_suffix = "end"
 
 let rec matches_chr chr t =
   match chr with
@@ -118,7 +41,8 @@ let rec remove_double_spaces xs =
   | x :: xs -> x :: remove_double_spaces xs
 ;;
 
-let test_line line =
+(* This method uses a regular expression to extract the return type, type name and arguments from a function definition, returning an array of the captured parts if the line includes a function definition or None otherwise *)
+let scan_line_for_function_definition line =
   let matcher =
     Re.Pcre.regexp "^\\s*([a-zA-Z0-9_ ]*?[\\s*])([a-zA-Z][a-zA-Z0-9_]*)[(](.*)[)]"
   in
@@ -128,6 +52,16 @@ let test_line line =
   | _ -> None
 ;;
 
+(* This method uses a regular expression to extract the name of a declared structure, returning the captured name if the line is a structure definition or None otherwise *)
+let scan_line_for_struct_definition line =
+  let matcher = Re.Pcre.regexp "struct\\s+([a-zA-Z0-9_ ]*)\\s*[;{]" in
+  let matched = Re.exec_opt matcher line in
+  match matched with
+  | Some matched -> Some (String.strip (Array.get (Re.Group.all matched) 1))
+  | _ -> None
+;;
+
+(* Strip the gpiod_ prefix from methods *)
 let strip_gpiod xs =
   let gpiod_prefix = "gpiod_" in
   if String.is_prefix ~prefix:gpiod_prefix xs
@@ -150,7 +84,8 @@ let extract_arguments args_str =
           String.strip l, String.strip r))
 ;;
 
-let split_header_at_functions header =
+(* This method removes all newlines from a source file and then reinserts them at the end of a structure or function definition so that we can run a regular expression to extract arguments *)
+let split_header_at_functions_and_structs header =
   let header = String.filter header ~f:(fun x -> not (Char.( = ) x '\n')) in
   let header = String.to_list header in
   let header = remove_tabs header in
@@ -158,66 +93,104 @@ let split_header_at_functions header =
   List.map ~f:(fun x -> String.of_char_list x) (full_split [ ';'; '/' ] header)
 ;;
 
-let as_ocaml_type_signature args return_type =
-  let args =
-    if List.length args = 0 then [ "void", "unit_arg" ] else args
-  in
-  let signature_parts = List.map
-       (List.append args [ return_type, "return" ])
-       ~f:(fun x ->
-         let ctype, _ = x in
-         to_ocaml_typename ctype) in
-  String.concat
-    ~sep:" -> "
-    signature_parts
+(* Take a C argument or return type and yield a Ctypes Ocaml type *)
+let to_ocaml_typename arg_type =
+  match arg_type with
+  | "void" -> "void"
+  | "int" -> "int"
+  | "unsigned int" -> "int"
+  | "bool" -> "bool"
+  | "size_t" -> "nativeint"
+  | "char *" | "const char *" | "char const *" -> "string_opt"
+  | "const char **" ->
+    "ptr void" (* Arrays of strings are treated as voidptr and sent with CArray *)
+  | "const int *" | "int *" | "const unsigned int *" | "unsigned int *" ->
+    "ptr void" (* Arrays of ints are treated the same as ^ *)
+  | _ ->
+    if String.is_prefix ~prefix:"struct" arg_type && String.is_suffix ~suffix:"*" arg_type
+    then
+      sprintf
+        "ptr_opt %s"
+        (String.strip (String.drop_suffix (String.drop_prefix arg_type 6) 1))
+    else raise (InvalidFunction (sprintf "Could not to_ocaml_typename '%s'" arg_type))
 ;;
 
-let process_identified_method out_file out_ml function_parts arguments =
-  let return_type = String.strip (Array.get function_parts 1) in
-  let function_name = String.strip (Array.get function_parts 2) in
-  let generated_fn = generate_function_binding function_name arguments return_type in
-  (* printf "Writing binding for %s\n" function_name; *)
-  fprintf out_file "%s\n" generated_fn;
+(* Build a Ctypes ocaml type signature from the arguments extracted from a function definition *)
+let as_ocaml_type_signature args return_type =
+  let args = if List.length args = 0 then [ "void", "unit_arg" ] else args in
+  let signature_parts =
+    List.map args ~f:(fun x ->
+        let ctype, _ = x in
+        to_ocaml_typename ctype)
+  in
+  let signature_parts =
+    List.concat
+      [ signature_parts; [ sprintf "(returning (%s))" (to_ocaml_typename return_type) ] ]
+  in
+  String.concat ~sep:" @-> " signature_parts
+;;
+
+let process_identified_method out_ml return_type function_name arguments =
   fprintf
     out_ml
-    "external %s : %s = \"ocaml_%s\"\n"
+    "let %s = foreign \"%s\" (%s)\n\n"
     (strip_gpiod function_name)
-    (as_ocaml_type_signature arguments return_type)
     function_name
+    (as_ocaml_type_signature arguments return_type)
 ;;
 
-let process_header_line out_file out_ml line =
-  let line_match = test_line line in
-  match line_match with
-  | Some fn ->
+let process_header_line seen_names out_ml line =
+  match scan_line_for_function_definition line with
+  | Some regex_parts ->
     (try
-       let arguments = extract_arguments (Array.get fn 3) in
-       if List.length arguments > 5
-       then raise (InvalidFunction "too many arguments")
-       else process_identified_method out_file out_ml fn arguments
+       let return_type = String.strip (Array.get regex_parts 1) in
+       let function_name = String.strip (Array.get regex_parts 2) in
+       let arguments = extract_arguments (Array.get regex_parts 3) in
+       if String.is_prefix ~prefix:"static" return_type
+       then raise (InvalidFunction "cannot link to static methods");
+       process_identified_method out_ml return_type function_name arguments
      with
     | InvalidFunction x ->
-      printf "Could not synthesize bindings for %s because %s\n" (Array.get fn 2) x;
+      printf
+        "Could not synthesize bindings for %s because %s\n"
+        (Array.get regex_parts 2)
+        x;
       ())
-  | _ -> ()
+  | _ ->
+    (match scan_line_for_struct_definition line with
+    | Some struct_name ->
+      if not (Hash_set.mem seen_names struct_name)
+      then (
+        fprintf
+          out_ml
+          "type %s\nlet %s : %s structure typ = structure \"%s\"\n\n"
+          struct_name
+          struct_name
+          struct_name
+          struct_name;
+        Hash_set.add seen_names struct_name;
+        ())
+      else printf "Saw %s twice\n" struct_name
+    | _ -> ())
 ;;
 
-let rec process_header_lines out_file out_ml = function
+let rec process_header_lines seen_names out_ml = function
   | [] -> ()
   | line :: remaining_lines ->
-    process_header_line out_file out_ml line;
-    process_header_lines out_file out_ml remaining_lines
+    process_header_line seen_names out_ml line;
+    process_header_lines seen_names out_ml remaining_lines
 ;;
 
-let process_header_file filepath output_c output_ml =
-  printf "Launching in %s\n" (Sys.getcwd ());
-  let out_file = Out_channel.create output_c in
+(* Take the gpiod.h header file and generate Ctype bindings to the given .ml file under the module Stubs.
+ * This is a naive binding generator, we just use regular expressions to spot function signatures and generate type definitions or bindings with the equivalent ocaml signatures.
+ * This works for libgpiod only because the signatures to methods are very straightforward *)
+let process_header_file filepath output_ml =
   let out_ml = Out_channel.create output_ml in
   let header = In_channel.read_all filepath in
-  let lines = split_header_at_functions header in
-  fprintf out_file "%s" prelude;
-  fprintf out_ml "let is_null (x: nativeint): bool = x = Nativeint.zero;;\n";
-  process_header_lines out_file out_ml lines
+  let lines = split_header_at_functions_and_structs header in
+  fprintf out_ml "%s" ml_prelude;
+  process_header_lines (Hash_set.create (module String)) out_ml lines;
+  fprintf out_ml "%s" ml_suffix
 ;;
 
-process_header_file "/usr/include/gpiod.h" "gpiod_stubs.c" "gpiod.ml"
+let () = process_header_file "/usr/include/gpiod.h" "gpiod_bindings.ml"
