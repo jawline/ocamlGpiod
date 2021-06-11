@@ -6,10 +6,10 @@
   (run %{gen})))
 
 (library
-  (name gpiod_bindings)
-  (public_name gpiod.bindings)
-  (modules gpiod_bindings)
-  (libraries ctypes))
+ (name gpiod_bindings)
+ (public_name gpiod.bindings)
+ (modules gpiod_bindings)
+ (libraries ctypes))
 
 (executable
  (name stubgen)
@@ -35,9 +35,8 @@
  (public_name gpiod)
  (libraries gpiod.bindings ctypes ctypes.stubs ctypes.foreign)
  (modules gpiod stubs)
-  (foreign_stubs
+ (foreign_stubs
   (language c)
   (names stubs))
  (c_library_flags
-  (:standard -lgpiod))
-)
+  (:standard -lgpiod)))

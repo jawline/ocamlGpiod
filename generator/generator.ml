@@ -2,14 +2,8 @@ open Core
 
 exception InvalidFunction of string
 
-let ml_prelude = "open Ctypes
-
-module Stubs (F : Ctypes.FOREIGN) = struct
-  open F
-";;
-
-let ml_suffix =
-"end";;
+let ml_prelude = "open Ctypes\n\nmodule Stubs (F : Ctypes.FOREIGN) = struct\n  open F\n"
+let ml_suffix = "end"
 
 let rec matches_chr chr t =
   match chr with
@@ -60,9 +54,7 @@ let scan_line_for_function_definition line =
 
 (* This method uses a regular expression to extract the name of a declared structure, returning the captured name if the line is a structure definition or None otherwise *)
 let scan_line_for_struct_definition line =
-  let matcher =
-    Re.Pcre.regexp "struct\\s+([a-zA-Z0-9_ ]*)\\s*[;{]"
-  in
+  let matcher = Re.Pcre.regexp "struct\\s+([a-zA-Z0-9_ ]*)\\s*[;{]" in
   let matched = Re.exec_opt matcher line in
   match matched with
   | Some matched -> Some (String.strip (Array.get (Re.Group.all matched) 1))
@@ -110,27 +102,32 @@ let to_ocaml_typename arg_type =
   | "bool" -> "bool"
   | "size_t" -> "nativeint"
   | "char *" | "const char *" | "char const *" -> "string_opt"
-  | "const char **" -> "ptr void" (* Arrays of strings are treated as voidptr and sent with CArray *)
-  | "const int *" | "int *" | "const unsigned int *" | "unsigned int *" -> "ptr void" (* Arrays of ints are treated the same as ^ *)
+  | "const char **" ->
+    "ptr void" (* Arrays of strings are treated as voidptr and sent with CArray *)
+  | "const int *" | "int *" | "const unsigned int *" | "unsigned int *" ->
+    "ptr void" (* Arrays of ints are treated the same as ^ *)
   | _ ->
     if String.is_prefix ~prefix:"struct" arg_type && String.is_suffix ~suffix:"*" arg_type
-    then sprintf "ptr_opt %s" (String.strip (String.drop_suffix (String.drop_prefix arg_type 6) 1))
+    then
+      sprintf
+        "ptr_opt %s"
+        (String.strip (String.drop_suffix (String.drop_prefix arg_type 6) 1))
     else raise (InvalidFunction (sprintf "Could not to_ocaml_typename '%s'" arg_type))
 ;;
 
 (* Build a Ctypes ocaml type signature from the arguments extracted from a function definition *)
 let as_ocaml_type_signature args return_type =
-  let args =
-    if List.length args = 0 then [ "void", "unit_arg" ] else args
+  let args = if List.length args = 0 then [ "void", "unit_arg" ] else args in
+  let signature_parts =
+    List.map args ~f:(fun x ->
+        let ctype, _ = x in
+        to_ocaml_typename ctype)
   in
-  let signature_parts = List.map args ~f:(fun x ->
-    let ctype, _ = x in
-    to_ocaml_typename ctype
-  ) in
-  let signature_parts = List.concat [signature_parts; [sprintf "(returning (%s))" (to_ocaml_typename return_type)]] in
-  String.concat
-    ~sep:" @-> "
-    signature_parts
+  let signature_parts =
+    List.concat
+      [ signature_parts; [ sprintf "(returning (%s))" (to_ocaml_typename return_type) ] ]
+  in
+  String.concat ~sep:" @-> " signature_parts
 ;;
 
 let process_identified_method out_ml return_type function_name arguments =
@@ -149,24 +146,32 @@ let process_header_line seen_names out_ml line =
        let return_type = String.strip (Array.get regex_parts 1) in
        let function_name = String.strip (Array.get regex_parts 2) in
        let arguments = extract_arguments (Array.get regex_parts 3) in
-       if String.is_prefix ~prefix:"static" return_type then raise (InvalidFunction "cannot link to static methods");
+       if String.is_prefix ~prefix:"static" return_type
+       then raise (InvalidFunction "cannot link to static methods");
        process_identified_method out_ml return_type function_name arguments
      with
     | InvalidFunction x ->
-      printf "Could not synthesize bindings for %s because %s\n" (Array.get regex_parts 2) x;
+      printf
+        "Could not synthesize bindings for %s because %s\n"
+        (Array.get regex_parts 2)
+        x;
       ())
-  | _ -> (
-    match scan_line_for_struct_definition line with
+  | _ ->
+    (match scan_line_for_struct_definition line with
     | Some struct_name ->
-      if not (Hash_set.mem seen_names struct_name) then (
-        fprintf out_ml "type %s\nlet %s : %s structure typ = structure \"%s\"\n\n" struct_name struct_name struct_name struct_name;
+      if not (Hash_set.mem seen_names struct_name)
+      then (
+        fprintf
+          out_ml
+          "type %s\nlet %s : %s structure typ = structure \"%s\"\n\n"
+          struct_name
+          struct_name
+          struct_name
+          struct_name;
         Hash_set.add seen_names struct_name;
-        ()
-      ) else (
-        printf "Saw %s twice\n" struct_name
-      )
-    | _ -> ()
-  )
+        ())
+      else printf "Saw %s twice\n" struct_name
+    | _ -> ())
 ;;
 
 let rec process_header_lines seen_names out_ml = function

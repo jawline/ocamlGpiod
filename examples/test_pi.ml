@@ -9,16 +9,17 @@ let open_line chip nr =
 ;;
 
 let print_gpiod_version () =
-  let s = (Gpiod.version_string ()) in
-  (match s with
+  let s = Gpiod.version_string () in
+  match s with
   | Some s -> printf "done %s\n" s
-  | None -> raise (InternalError "version_string failed"))
+  | None -> raise (InternalError "version_string failed")
 ;;
 
 let gpio_test_pi () =
   printf "preparing call\n";
   print_gpiod_version ();
-  let chip = match Gpiod.chip_open_by_name (Some "gpiochip0") with
+  let chip =
+    match Gpiod.chip_open_by_name (Some "gpiochip0") with
     | Some v -> v
     | None -> raise (InternalError "Could not open gpiochip0")
   in
@@ -33,4 +34,4 @@ let gpio_test_pi () =
   ()
 ;;
 
-let () = gpio_test_pi () ;;
+let () = gpio_test_pi ()
